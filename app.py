@@ -825,9 +825,8 @@ with master_tab:
     with st.form("add_category_form"):
 
         category_name = st.text_input(
-            "Category Name",
-            placeholder="Truss / Speaker / Lighting",
-        )
+    "Category Name"
+)
 
         add_category = st.form_submit_button(
             "➕ Add Category"
@@ -903,9 +902,8 @@ with master_tab:
             ):
 
                 new_item_name = st.text_input(
-                    "Item Name",
-                    placeholder="Example: 10ft Truss",
-                )
+    "Item Name"
+)
 
                 add_item = st.form_submit_button(
                     "➕ Add Item"
