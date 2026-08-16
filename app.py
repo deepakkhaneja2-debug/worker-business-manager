@@ -537,10 +537,57 @@ with events_tab:
                     st.rerun()
 
                 # =========================================
-                # EVENT SAMAAN SELECTION
+                # EVENT SAMAAN - MOBILE FRIENDLY TABLE
                 # =========================================
 
                 st.markdown("### 📦 Add Samaan")
+
+                # Mobile-friendly table CSS
+                st.markdown(
+                    """
+                    <style>
+                    .samaan-table-wrap {
+                        width: 100%;
+                        overflow-x: auto;
+                        -webkit-overflow-scrolling: touch;
+                        margin-bottom: 12px;
+                    }
+
+                    .samaan-table {
+                        min-width: 650px;
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 14px;
+                    }
+
+                    .samaan-table th {
+                        padding: 10px 8px;
+                        text-align: left;
+                        border-bottom: 2px solid #888;
+                        white-space: nowrap;
+                    }
+
+                    .samaan-table td {
+                        padding: 9px 8px;
+                        border-bottom: 1px solid #ddd;
+                        vertical-align: middle;
+                        white-space: nowrap;
+                    }
+
+                    .samaan-item {
+                        font-weight: 500;
+                    }
+
+                    .samaan-note {
+                        padding: 5px 8px;
+                        border-radius: 5px;
+                        background: #fff3cd;
+                        border: 1px solid #ffc107;
+                    }
+                    </style>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
                 categories = (
                     supabase
@@ -583,87 +630,104 @@ with events_tab:
                         expanded=True,
                     ):
 
+                        # ---------------------------------
                         # TABLE HEADER
-                        h1, h2, h3, h4 = st.columns(
-                            [4, 1.5, 1.5, 4]
+                        # ---------------------------------
+
+                        st.markdown(
+                            """
+                            <div class="samaan-table-wrap">
+                                <table class="samaan-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:40%">Item</th>
+                                            <th style="width:15%">Select</th>
+                                            <th style="width:15%">Qty</th>
+                                            <th style="width:30%">
+                                                Note / Status
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
                         )
-
-                        h1.markdown("**Item**")
-                        h2.markdown("**Select**")
-                        h3.markdown("**Qty**")
-                        h4.markdown("**Note / Status**")
-
-                        st.divider()
 
                         selected_items = []
 
+                        # ---------------------------------
+                        # ITEMS
+                        # ---------------------------------
+
                         for item in items.data:
 
-                            c1, c2, c3, c4 = st.columns(
-                                [4, 1.5, 1.5, 4]
+                            item_id = item["id"]
+
+                            # Each row
+                            st.markdown(
+                                f"""
+                                <div class="samaan-table-wrap">
+                                    <table class="samaan-table">
+                                        <tbody>
+                                            <tr>
+                                                <td style="width:40%">
+                                                    <span class="samaan-item">
+                                                        {item["item_name"]}
+                                                    </span>
+                                                </td>
+                                                <td style="width:15%">
+                                                </td>
+                                                <td style="width:15%">
+                                                </td>
+                                                <td style="width:30%">
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
                             )
 
-                            # ITEM
-                            c1.write(
-                                item["item_name"]
+                            # Interactive controls
+                            c1, c2, c3 = st.columns(
+                                [4, 1.5, 4]
                             )
 
-                            # SELECT
                             selected = c2.checkbox(
                                 "Select",
                                 key=(
-                                    f"select_"
+                                    f"event_select_"
                                     f"{event['id']}_"
-                                    f"{item['id']}"
+                                    f"{item_id}"
                                 ),
                                 label_visibility="collapsed",
                             )
 
-                            # QUANTITY
-                            quantity = c3.number_input(
-                                "Qty",
+                            quantity = c1.number_input(
+                                f"Qty - {item['item_name']}",
                                 min_value=1,
                                 value=1,
                                 step=1,
                                 disabled=not selected,
                                 key=(
-                                    f"qty_"
+                                    f"event_qty_"
                                     f"{event['id']}_"
-                                    f"{item['id']}"
+                                    f"{item_id}"
                                 ),
-                                label_visibility="collapsed",
                             )
 
-                            # NOTE
-                            note = c4.text_input(
-                                "Note / Status",
+                            note = c3.text_input(
+                                f"Note - {item['item_name']}",
                                 key=(
-                                    f"note_"
+                                    f"event_note_"
                                     f"{event['id']}_"
-                                    f"{item['id']}"
+                                    f"{item_id}"
                                 ),
                                 label_visibility="collapsed",
+                                placeholder="",
                             )
-
-                            # NOTE HIGHLIGHT
-                            if note.strip():
-
-                                c4.markdown(
-                                    f"""
-                                    <div style="
-                                        margin-top:-8px;
-                                        padding:6px 10px;
-                                        border-radius:6px;
-                                        background:#fff3cd;
-                                        border:1px solid #ffc107;
-                                        color:#856404;
-                                        font-size:13px;
-                                    ">
-                                    📝 {note}
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True,
-                                )
 
                             if selected:
 
@@ -677,10 +741,14 @@ with events_tab:
 
                         st.divider()
 
+                        # ---------------------------------
+                        # SAVE SELECTED ITEMS
+                        # ---------------------------------
+
                         if st.button(
                             f"➕ Add Selected {category['name']}",
                             key=(
-                                f"add_category_"
+                                f"save_event_category_"
                                 f"{event['id']}_"
                                 f"{category['id']}"
                             ),
@@ -727,12 +795,16 @@ with events_tab:
                                         row = {
                                             "event_id":
                                                 event["id"],
+
                                             "master_item_id":
                                                 item["id"],
+
                                             "item_name":
                                                 item["item_name"],
+
                                             "quantity":
                                                 quantity,
+
                                             "note":
                                                 note or None,
                                         }
@@ -760,7 +832,7 @@ with events_tab:
                                             )
 
                                     st.success(
-                                        "Selected Samaan added to event."
+                                        "Selected Samaan added."
                                     )
 
                                     st.rerun()
@@ -770,6 +842,116 @@ with events_tab:
                                     st.error(
                                         f"Could not save Samaan: {e}"
                                     )
+
+                # =========================================
+                # EVENT SAMAAN LIST
+                # =========================================
+
+                st.markdown("### 📋 Event Samaan List")
+
+                selected_event_items = (
+                    supabase
+                    .table("event_items")
+                    .select("*")
+                    .eq(
+                        "event_id",
+                        event["id"],
+                    )
+                    .order("item_name")
+                    .execute()
+                )
+
+                if not selected_event_items.data:
+
+                    st.info(
+                        "No Samaan selected for this event."
+                    )
+
+                else:
+
+                    st.markdown(
+                        """
+                        <div class="samaan-table-wrap">
+                            <table class="samaan-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Qty</th>
+                                        <th>Note / Status</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    for event_item in selected_event_items.data:
+
+                        c1, c2, c3 = st.columns(
+                            [4, 1.5, 4]
+                        )
+
+                        c1.write(
+                            event_item["item_name"]
+                        )
+
+                        c2.write(
+                            event_item["quantity"]
+                        )
+
+                        current_note = (
+                            event_item.get("note")
+                            or ""
+                        )
+
+                        note = c3.text_input(
+                            "Note / Status",
+                            value=current_note,
+                            key=(
+                                f"saved_event_note_"
+                                f"{event_item['id']}"
+                            ),
+                            label_visibility="collapsed",
+                        )
+
+                        if note.strip():
+
+                            c3.markdown(
+                                f"""
+                                <div class="samaan-note">
+                                    📝 {note}
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+
+                        if note != current_note:
+
+                            try:
+
+                                (
+                                    supabase
+                                    .table("event_items")
+                                    .update(
+                                        {
+                                            "note":
+                                                note.strip()
+                                                or None
+                                        }
+                                    )
+                                    .eq(
+                                        "id",
+                                        event_item["id"],
+                                    )
+                                    .execute()
+                                )
+
+                            except Exception as e:
+
+                                st.error(
+                                    f"Could not update note: {e}"
+                                )
 
                 # =========================================
                 # SELECTED EVENT SAMAAN
