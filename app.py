@@ -540,9 +540,7 @@ with events_tab:
                 # EVENT SAMAAN SELECTION
                 # =========================================
 
-                st.markdown(
-                    "### 📦 Add Samaan"
-                )
+                st.markdown("### 📦 Add Samaan")
 
                 categories = (
                     supabase
@@ -581,69 +579,112 @@ with events_tab:
                         continue
 
                     with st.expander(
-                        f"📁 {category['name']}"
+                        f"📁 {category['name']}",
+                        expanded=True,
                     ):
 
-                        st.markdown(
-                            "| Item | Select | Qty |"
+                        # TABLE HEADER
+                        h1, h2, h3, h4 = st.columns(
+                            [4, 1.5, 1.5, 4]
                         )
 
-                        st.markdown(
-                            "|---|:---:|---:|"
-                        )
+                        h1.markdown("**Item**")
+                        h2.markdown("**Select**")
+                        h3.markdown("**Qty**")
+                        h4.markdown("**Note / Status**")
+
+                        st.divider()
 
                         selected_items = []
 
                         for item in items.data:
 
-                            col1, col2, col3 = st.columns(
-                                [5, 2, 2]
+                            c1, c2, c3, c4 = st.columns(
+                                [4, 1.5, 1.5, 4]
                             )
 
-                            col1.write(
+                            # ITEM
+                            c1.write(
                                 item["item_name"]
                             )
 
-                            selected = col2.checkbox(
-                                "☑",
+                            # SELECT
+                            selected = c2.checkbox(
+                                "Select",
                                 key=(
                                     f"select_"
                                     f"{event['id']}_"
                                     f"{item['id']}"
                                 ),
+                                label_visibility="collapsed",
                             )
 
-                            quantity = col3.number_input(
+                            # QUANTITY
+                            quantity = c3.number_input(
                                 "Qty",
-                                min_value=1.0,
-                                value=1.0,
-                                step=1.0,
+                                min_value=1,
+                                value=1,
+                                step=1,
                                 disabled=not selected,
-                                label_visibility="collapsed",
                                 key=(
                                     f"qty_"
                                     f"{event['id']}_"
                                     f"{item['id']}"
                                 ),
+                                label_visibility="collapsed",
                             )
+
+                            # NOTE
+                            note = c4.text_input(
+                                "Note / Status",
+                                key=(
+                                    f"note_"
+                                    f"{event['id']}_"
+                                    f"{item['id']}"
+                                ),
+                                label_visibility="collapsed",
+                            )
+
+                            # NOTE HIGHLIGHT
+                            if note.strip():
+
+                                c4.markdown(
+                                    f"""
+                                    <div style="
+                                        margin-top:-8px;
+                                        padding:6px 10px;
+                                        border-radius:6px;
+                                        background:#fff3cd;
+                                        border:1px solid #ffc107;
+                                        color:#856404;
+                                        font-size:13px;
+                                    ">
+                                    📝 {note}
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True,
+                                )
 
                             if selected:
 
                                 selected_items.append(
-                                    (
-                                        item,
-                                        quantity,
-                                    )
+                                    {
+                                        "item": item,
+                                        "quantity": quantity,
+                                        "note": note.strip(),
+                                    }
                                 )
 
+                        st.divider()
+
                         if st.button(
-                            f"Add Selected "
-                            f"{category['name']}",
+                            f"➕ Add Selected {category['name']}",
                             key=(
                                 f"add_category_"
                                 f"{event['id']}_"
                                 f"{category['id']}"
                             ),
+                            width="stretch",
                         ):
 
                             if not selected_items:
@@ -654,69 +695,87 @@ with events_tab:
 
                             else:
 
-                                for item, quantity in selected_items:
+                                try:
 
-                                    existing = (
-                                        supabase
-                                        .table("event_items")
-                                        .select("id")
-                                        .eq(
-                                            "event_id",
-                                            event["id"],
+                                    for selected_item in selected_items:
+
+                                        item = selected_item["item"]
+
+                                        quantity = selected_item[
+                                            "quantity"
+                                        ]
+
+                                        note = selected_item[
+                                            "note"
+                                        ]
+
+                                        existing = (
+                                            supabase
+                                            .table("event_items")
+                                            .select("id")
+                                            .eq(
+                                                "event_id",
+                                                event["id"],
+                                            )
+                                            .eq(
+                                                "master_item_id",
+                                                item["id"],
+                                            )
+                                            .execute()
                                         )
-                                        .eq(
-                                            "master_item_id",
-                                            item["id"],
-                                        )
-                                        .execute()
+
+                                        row = {
+                                            "event_id":
+                                                event["id"],
+                                            "master_item_id":
+                                                item["id"],
+                                            "item_name":
+                                                item["item_name"],
+                                            "quantity":
+                                                quantity,
+                                            "note":
+                                                note or None,
+                                        }
+
+                                        if existing.data:
+
+                                            (
+                                                supabase
+                                                .table("event_items")
+                                                .update(row)
+                                                .eq(
+                                                    "id",
+                                                    existing.data[0]["id"],
+                                                )
+                                                .execute()
+                                            )
+
+                                        else:
+
+                                            (
+                                                supabase
+                                                .table("event_items")
+                                                .insert(row)
+                                                .execute()
+                                            )
+
+                                    st.success(
+                                        "Selected Samaan added to event."
                                     )
 
-                                    if existing.data:
+                                    st.rerun()
 
-                                        supabase.table(
-                                            "event_items"
-                                        ).update(
-                                            {
-                                                "quantity":
-                                                    quantity
-                                            }
-                                        ).eq(
-                                            "id",
-                                            existing.data[0]["id"],
-                                        ).execute()
+                                except Exception as e:
 
-                                    else:
-
-                                        supabase.table(
-                                            "event_items"
-                                        ).insert(
-                                            {
-                                                "event_id":
-                                                    event["id"],
-                                                "master_item_id":
-                                                    item["id"],
-                                                "item_name":
-                                                    item["item_name"],
-                                                "quantity":
-                                                    quantity,
-                                                "loaded":
-                                                    False,
-                                            }
-                                        ).execute()
-
-                                st.success(
-                                    "Selected items added."
-                                )
-
-                                st.rerun()
+                                    st.error(
+                                        f"Could not save Samaan: {e}"
+                                    )
 
                 # =========================================
                 # SELECTED EVENT SAMAAN
                 # =========================================
 
-                st.markdown(
-                    "### 📋 Event Samaan List"
-                )
+                st.markdown("### 📋 Event Samaan List")
 
                 selected_event_items = (
                     supabase
@@ -738,66 +797,91 @@ with events_tab:
 
                 else:
 
-                    st.markdown(
-                        "| Item | Qty | Loaded | Note |"
+                    # HEADER
+                    h1, h2, h3 = st.columns(
+                        [5, 2, 5]
                     )
 
-                    st.markdown(
-                        "|---|---:|:---:|---|"
-                    )
+                    h1.markdown("**Item**")
+                    h2.markdown("**Qty**")
+                    h3.markdown("**Note / Status**")
+
+                    st.divider()
 
                     for item in selected_event_items.data:
 
-                        col1, col2, col3, col4 = st.columns(
-                            [4, 2, 2, 4]
+                        c1, c2, c3 = st.columns(
+                            [5, 2, 5]
                         )
 
-                        col1.write(
+                        c1.write(
                             item["item_name"]
                         )
 
-                        col2.write(
+                        c2.write(
                             item["quantity"]
                         )
 
-                        loaded = col3.checkbox(
-                            "Loaded",
-                            value=item["loaded"],
-                            key=(
-                                f"loaded_"
-                                f"{item['id']}"
-                            ),
+                        current_note = (
+                            item.get("note")
+                            or ""
                         )
 
-                        note = col4.text_input(
-                            "Note",
-                            value=item.get("note")
-                            or "",
+                        note = c3.text_input(
+                            "Note / Status",
+                            value=current_note,
+                            key=(
+                                f"event_note_"
+                                f"{item['id']}"
+                            ),
                             label_visibility="collapsed",
-                            key=(
-                                f"note_"
-                                f"{item['id']}"
-                            ),
                         )
 
-                        if (
-                            loaded != item["loaded"]
-                            or note
-                            != (item.get("note") or "")
-                        ):
+                        # NORMAL / HIGHLIGHTED STATUS
+                        if note.strip():
 
-                            supabase.table(
-                                "event_items"
-                            ).update(
-                                {
-                                    "loaded": loaded,
-                                    "note": note,
-                                }
-                            ).eq(
-                                "id",
-                                item["id"],
-                            ).execute()
+                            c3.markdown(
+                                f"""
+                                <div style="
+                                    margin-top:-8px;
+                                    padding:7px 10px;
+                                    border-radius:6px;
+                                    background:#fff3cd;
+                                    border:1px solid #ffc107;
+                                    color:#856404;
+                                ">
+                                📝 {note}
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
 
+                        if note != current_note:
+
+                            try:
+
+                                (
+                                    supabase
+                                    .table("event_items")
+                                    .update(
+                                        {
+                                            "note":
+                                                note.strip()
+                                                or None
+                                        }
+                                    )
+                                    .eq(
+                                        "id",
+                                        item["id"],
+                                    )
+                                    .execute()
+                                )
+
+                            except Exception as e:
+
+                                st.error(
+                                    f"Could not update note: {e}"
+                                )
 
 # =========================================================
 # SAMAAN MASTER
